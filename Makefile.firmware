@@ -1,0 +1,190 @@
+BUILD_DIR ?= /tmp/rpi-boot
+DISTR_DIR ?= $(CURDIR)/distrib
+
+FIRMWARE_BUILD_DIR := $(BUILD_DIR)/firmware
+FIRMWARE_DISTR_DIR := $(DISTR_DIR)
+
+FIRMWARE_FILES := bootcode.bin \
+                  fixup.dat \
+                  fixup4.dat \
+                  fixup4cd.dat \
+                  fixup4db.dat \
+                  fixup4x.dat \
+                  fixup_cd.dat \
+                  fixup_db.dat \
+                  fixup_x.dat \
+                  start.elf \
+                  start4.elf \
+                  start4cd.elf \
+                  start4db.elf \
+                  start4x.elf \
+                  start_cd.elf \
+                  start_db.elf \
+                  start_x.elf
+
+################################################################################
+# Macro
+################################################################################
+
+define FIRMWARE_DOWNLOAD
+	@if [ ! -f "$@" ]; then \
+		echo "################################################################################"; \
+		echo "# Download: $@"; \
+		echo "################################################################################"; \
+		curl -o "$@" -L "https://github.com/raspberrypi/firmware/raw/master/boot/$(@F)"; \
+	fi
+endef
+
+define FIRMWARE_INSTALL
+	@echo "################################################################################"
+	@echo "# Install: $@"
+	@echo "################################################################################"
+	@install -m 0644 "$<" "$@"
+endef
+
+################################################################################
+# Default Target
+################################################################################
+
+.PHONY: firmware
+firmware: $(FIRMWARE_FILES)
+
+################################################################################
+# Cleanup Target
+################################################################################
+
+.PHONY: firmware-clean
+firmware-clean:
+	@for f in $(FIRMWARE_FILES); do \
+		rm -f "$(FIRMWARE_DISTR_DIR)/$$f"; \
+	done
+
+################################################################################
+# Build Directory
+################################################################################
+
+$(FIRMWARE_BUILD_DIR):
+	@mkdir -p "$(FIRMWARE_BUILD_DIR)"
+
+################################################################################
+# Firmware Binaries
+################################################################################
+
+.PHONY: bootcode.bin
+bootcode.bin: $(FIRMWARE_DISTR_DIR)/bootcode.bin
+$(FIRMWARE_BUILD_DIR)/bootcode.bin: $(FIRMWARE_BUILD_DIR)
+	$(FIRMWARE_DOWNLOAD)
+$(FIRMWARE_DISTR_DIR)/bootcode.bin: $(FIRMWARE_BUILD_DIR)/bootcode.bin
+	$(FIRMWARE_INSTALL)
+
+.PHONY: fixup.dat
+fixup.dat: $(FIRMWARE_DISTR_DIR)/fixup.dat
+$(FIRMWARE_BUILD_DIR)/fixup.dat: $(FIRMWARE_BUILD_DIR)
+	$(FIRMWARE_DOWNLOAD)
+$(FIRMWARE_DISTR_DIR)/fixup.dat: $(FIRMWARE_BUILD_DIR)/fixup.dat
+	$(FIRMWARE_INSTALL)
+
+.PHONY: fixup4.dat
+fixup4.dat: $(FIRMWARE_DISTR_DIR)/fixup4.dat
+$(FIRMWARE_BUILD_DIR)/fixup4.dat: $(FIRMWARE_BUILD_DIR)
+	$(FIRMWARE_DOWNLOAD)
+$(FIRMWARE_DISTR_DIR)/fixup4.dat: $(FIRMWARE_BUILD_DIR)/fixup4.dat
+	$(FIRMWARE_INSTALL)
+
+.PHONY: fixup4cd.dat
+fixup4cd.dat: $(FIRMWARE_DISTR_DIR)/fixup4cd.dat
+$(FIRMWARE_BUILD_DIR)/fixup4cd.dat: $(FIRMWARE_BUILD_DIR)
+	$(FIRMWARE_DOWNLOAD)
+$(FIRMWARE_DISTR_DIR)/fixup4cd.dat: $(FIRMWARE_BUILD_DIR)/fixup4cd.dat
+	$(FIRMWARE_INSTALL)
+
+.PHONY: fixup4db.dat
+fixup4db.dat: $(FIRMWARE_DISTR_DIR)/fixup4db.dat
+$(FIRMWARE_BUILD_DIR)/fixup4db.dat: $(FIRMWARE_BUILD_DIR)
+	$(FIRMWARE_DOWNLOAD)
+$(FIRMWARE_DISTR_DIR)/fixup4db.dat: $(FIRMWARE_BUILD_DIR)/fixup4db.dat
+	$(FIRMWARE_INSTALL)
+
+.PHONY: fixup4x.dat
+fixup4x.dat: $(FIRMWARE_DISTR_DIR)/fixup4x.dat
+$(FIRMWARE_BUILD_DIR)/fixup4x.dat: $(FIRMWARE_BUILD_DIR)
+	$(FIRMWARE_DOWNLOAD)
+$(FIRMWARE_DISTR_DIR)/fixup4x.dat: $(FIRMWARE_BUILD_DIR)/fixup4x.dat
+	$(FIRMWARE_INSTALL)
+
+.PHONY: fixup_cd.dat
+fixup_cd.dat: $(FIRMWARE_DISTR_DIR)/fixup_cd.dat
+$(FIRMWARE_BUILD_DIR)/fixup_cd.dat: $(FIRMWARE_BUILD_DIR)
+	$(FIRMWARE_DOWNLOAD)
+$(FIRMWARE_DISTR_DIR)/fixup_cd.dat: $(FIRMWARE_BUILD_DIR)/fixup_cd.dat
+	$(FIRMWARE_INSTALL)
+
+.PHONY: fixup_db.dat
+fixup_db.dat: $(FIRMWARE_DISTR_DIR)/fixup_db.dat
+$(FIRMWARE_BUILD_DIR)/fixup_db.dat: $(FIRMWARE_BUILD_DIR)
+	$(FIRMWARE_DOWNLOAD)
+$(FIRMWARE_DISTR_DIR)/fixup_db.dat: $(FIRMWARE_BUILD_DIR)/fixup_db.dat
+	$(FIRMWARE_INSTALL)
+
+.PHONY: fixup_x.dat
+fixup_x.dat: $(FIRMWARE_DISTR_DIR)/fixup_x.dat
+$(FIRMWARE_BUILD_DIR)/fixup_x.dat: $(FIRMWARE_BUILD_DIR)
+	$(FIRMWARE_DOWNLOAD)
+$(FIRMWARE_DISTR_DIR)/fixup_x.dat: $(FIRMWARE_BUILD_DIR)/fixup_x.dat
+	$(FIRMWARE_INSTALL)
+
+.PHONY: start.elf
+start.elf: $(FIRMWARE_DISTR_DIR)/start.elf
+$(FIRMWARE_BUILD_DIR)/start.elf: $(FIRMWARE_BUILD_DIR)
+	$(FIRMWARE_DOWNLOAD)
+$(FIRMWARE_DISTR_DIR)/start.elf: $(FIRMWARE_BUILD_DIR)/start.elf
+	$(FIRMWARE_INSTALL)
+
+.PHONY: start4.elf
+start4.elf: $(FIRMWARE_DISTR_DIR)/start4.elf
+$(FIRMWARE_BUILD_DIR)/start4.elf: $(FIRMWARE_BUILD_DIR)
+	$(FIRMWARE_DOWNLOAD)
+$(FIRMWARE_DISTR_DIR)/start4.elf: $(FIRMWARE_BUILD_DIR)/start4.elf
+	$(FIRMWARE_INSTALL)
+
+.PHONY: start4cd.elf
+start4cd.elf: $(FIRMWARE_DISTR_DIR)/start4cd.elf
+$(FIRMWARE_BUILD_DIR)/start4cd.elf: $(FIRMWARE_BUILD_DIR)
+	$(FIRMWARE_DOWNLOAD)
+$(FIRMWARE_DISTR_DIR)/start4cd.elf: $(FIRMWARE_BUILD_DIR)/start4cd.elf
+	$(FIRMWARE_INSTALL)
+
+.PHONY: start4db.elf
+start4db.elf: $(FIRMWARE_DISTR_DIR)/start4db.elf
+$(FIRMWARE_BUILD_DIR)/start4db.elf: $(FIRMWARE_BUILD_DIR)
+	$(FIRMWARE_DOWNLOAD)
+$(FIRMWARE_DISTR_DIR)/start4db.elf: $(FIRMWARE_BUILD_DIR)/start4db.elf
+	$(FIRMWARE_INSTALL)
+
+.PHONY: start4x.elf
+start4x.elf: $(FIRMWARE_DISTR_DIR)/start4x.elf
+$(FIRMWARE_BUILD_DIR)/start4x.elf: $(FIRMWARE_BUILD_DIR)
+	$(FIRMWARE_DOWNLOAD)
+$(FIRMWARE_DISTR_DIR)/start4x.elf: $(FIRMWARE_BUILD_DIR)/start4x.elf
+	$(FIRMWARE_INSTALL)
+
+.PHONY: start_cd.elf
+start_cd.elf: $(FIRMWARE_DISTR_DIR)/start_cd.elf
+$(FIRMWARE_BUILD_DIR)/start_cd.elf: $(FIRMWARE_BUILD_DIR)
+	$(FIRMWARE_DOWNLOAD)
+$(FIRMWARE_DISTR_DIR)/start_cd.elf: $(FIRMWARE_BUILD_DIR)/start_cd.elf
+	$(FIRMWARE_INSTALL)
+
+.PHONY: start_db.elf
+start_db.elf: $(FIRMWARE_DISTR_DIR)/start_db.elf
+$(FIRMWARE_BUILD_DIR)/start_db.elf: $(FIRMWARE_BUILD_DIR)
+	$(FIRMWARE_DOWNLOAD)
+$(FIRMWARE_DISTR_DIR)/start_db.elf: $(FIRMWARE_BUILD_DIR)/start_db.elf
+	$(FIRMWARE_INSTALL)
+
+.PHONY: start_x.elf
+start_x.elf: $(FIRMWARE_DISTR_DIR)/start_x.elf
+$(FIRMWARE_BUILD_DIR)/start_x.elf: $(FIRMWARE_BUILD_DIR)
+	$(FIRMWARE_DOWNLOAD)
+$(FIRMWARE_DISTR_DIR)/start_x.elf: $(FIRMWARE_BUILD_DIR)/start_x.elf
+	$(FIRMWARE_INSTALL)

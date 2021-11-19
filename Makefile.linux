@@ -1,0 +1,81 @@
+BUILD_DIR ?= /tmp/rpi-boot
+DISTR_DIR ?= $(CURDIR)/distrib
+
+LINUX_BUILD_DIR := $(BUILD_DIR)/linux
+LINUX_DISTR_DIR := $(DISTR_DIR)
+
+ARM32_CROSS_COMPILE ?= arm-none-linux-gnueabihf-
+ARM64_CROSS_COMPILE ?= aarch64-none-linux-gnu-
+
+LINUX_FILES := dtbs
+
+################################################################################
+# Macro
+################################################################################
+
+define LINUX_DEVICE_TREE_DEFCONFIG
+	@echo "################################################################################"
+	@echo "# DefConfig: $@"
+	@echo "################################################################################"
+	@ARCH=arm CROSS_COMPILE="$(ARM32_CROSS_COMPILE)" make -C "$(CURDIR)/linux" -j "$(shell nproc)" O="$1" bcm2711_defconfig
+endef
+
+define LINUX_DEVICE_TREE_BUILD
+	@echo "################################################################################"
+	@echo "# Build: $@"
+	@echo "################################################################################"
+	@ARCH=arm CROSS_COMPILE="$(ARM32_CROSS_COMPILE)" make -C "$(CURDIR)/linux" -j "$(shell nproc)" O="$1" dtbs
+	@mkdir -m 0755 -p "$1/overlays"
+	@find "$1/arch/arm/boot/dts"          -mindepth 1 -maxdepth 1 -type f -name "*.dtb"  | xargs -I {} install -m 0644 {} "$1"
+	@find "$1/arch/arm/boot/dts/overlays" -mindepth 1 -maxdepth 1 -type f -name "*.dtb"  | xargs -I {} install -m 0644 {} "$1/overlays"
+	@find "$1/arch/arm/boot/dts/overlays" -mindepth 1 -maxdepth 1 -type f -name "*.dtbo" | xargs -I {} install -m 0644 {} "$1/overlays"
+	@touch "$1/.build"
+endef
+
+define LINUX_DEVICE_TREE_INSTALL
+	@echo "################################################################################"
+	@echo "# Install: $@"
+	@echo "################################################################################"
+	@mkdir -m 0755 -p "$2/overlays"
+	@find "$1"          -mindepth 1 -maxdepth 1 -type f -name "*.dtb"  | xargs -I {} install -m 0644 {} "$2"
+	@find "$1/overlays" -mindepth 1 -maxdepth 1 -type f -name "*.dtb"  | xargs -I {} install -m 0644 {} "$2/overlays"
+	@find "$1/overlays" -mindepth 1 -maxdepth 1 -type f -name "*.dtbo" | xargs -I {} install -m 0644 {} "$2/overlays"
+	@touch "$1/.install"
+endef
+
+################################################################################
+# Default Target
+################################################################################
+
+.PHONY: linux
+linux: $(LINUX_FILES)
+
+################################################################################
+# Cleanup Target
+################################################################################
+
+.PHONY: linux-clean
+linux-clean:
+	@find "$(LINUX_DISTR_DIR)" -type f -name "*.dtb" | xargs rm -f
+	@rm -fr "$(LINUX_DISTR_DIR)/overlays"
+	@rm -fr "$(LINUX_BUILD_DIR)"
+
+################################################################################
+# Build Directory
+################################################################################
+
+$(LINUX_BUILD_DIR):
+	@mkdir -p "$@"
+
+################################################################################
+# Device Tree
+################################################################################
+
+.PHONY: dtbs
+dtbs: $(LINUX_BUILD_DIR)/dtb/.install
+$(LINUX_BUILD_DIR)/dtb/.config: $(LINUX_BUILD_DIR)
+	$(call LINUX_DEVICE_TREE_DEFCONFIG,$(LINUX_BUILD_DIR)/dtb)
+$(LINUX_BUILD_DIR)/dtb/.build: $(LINUX_BUILD_DIR)/dtb/.config
+	$(call LINUX_DEVICE_TREE_BUILD,$(LINUX_BUILD_DIR)/dtb)
+$(LINUX_BUILD_DIR)/dtb/.install: $(LINUX_BUILD_DIR)/dtb/.build
+	$(call LINUX_DEVICE_TREE_INSTALL,$(LINUX_BUILD_DIR)/dtb,$(LINUX_DISTR_DIR))

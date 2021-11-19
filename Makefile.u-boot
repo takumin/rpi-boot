@@ -1,0 +1,117 @@
+BUILD_DIR ?= /tmp/rpi-boot
+DISTR_DIR ?= $(CURDIR)/distrib
+
+UBOOT_BUILD_DIR := $(BUILD_DIR)/u-boot
+UBOOT_DISTR_DIR := $(DISTR_DIR)
+
+ARM32_CROSS_COMPILE ?= arm-none-linux-gnueabihf-
+ARM64_CROSS_COMPILE ?= aarch64-none-linux-gnu-
+
+UBOOT_FILES := u-boot-rpi3-arm64.bin \
+               u-boot-rpi3-arm32.bin \
+               u-boot-rpi4-arm64.bin \
+               u-boot-rpi4-arm32.bin
+
+################################################################################
+# Macro
+################################################################################
+
+define UBOOT_DEFCONFIG
+	@echo "################################################################################"
+	@echo "# DefConfig: $@"
+	@echo "################################################################################"
+	@CROSS_COMPILE="$1" make -C "$(CURDIR)/u-boot" -j "$(shell nproc)" O="$2" $3
+	@sed -i -E 's/^CONFIG_BOOTDELAY=.*/CONFIG_BOOTDELAY=0/' "$2/.config"
+	@sed -i -E 's/^CONFIG_BOOTCOMMAND=.*/CONFIG_BOOTCOMMAND="run bootcmd_dhcp"/' "$2/.config"
+endef
+
+define UBOOT_BUILD
+	@echo "################################################################################"
+	@echo "# Build: $@"
+	@echo "################################################################################"
+	@CROSS_COMPILE="$1" make -C "$(CURDIR)/u-boot" -j "$(shell nproc)" O="$2"
+endef
+
+define UBOOT_INSTALL
+	@echo "################################################################################"
+	@echo "# Install: $@"
+	@echo "################################################################################"
+	@install -m 0644 "$<" "$@"
+endef
+
+################################################################################
+# Default Target
+################################################################################
+
+.PHONY: u-boot
+u-boot: $(UBOOT_FILES)
+
+################################################################################
+# Cleanup Target
+################################################################################
+
+.PHONY: u-boot-clean
+u-boot-clean:
+	@for f in $(UBOOT_FILES); do \
+		rm -f "$(UBOOT_DISTR_DIR)/$$f"; \
+	done
+	@rm -fr "$(UBOOT_BUILD_DIR)"
+
+################################################################################
+# Build Directory
+################################################################################
+
+$(UBOOT_BUILD_DIR):
+	@mkdir -p "$@"
+
+################################################################################
+# Raspberry Pi 3 64Bit
+################################################################################
+
+.PHONY: u-boot-rpi3-arm64.bin
+u-boot-rpi3-arm64.bin: $(UBOOT_DISTR_DIR)/u-boot-rpi3-arm64.bin
+$(UBOOT_BUILD_DIR)/rpi3-arm64/.config: $(UBOOT_BUILD_DIR)
+	$(call UBOOT_DEFCONFIG,$(ARM64_CROSS_COMPILE),$(UBOOT_BUILD_DIR)/rpi3-arm64,rpi_3_defconfig)
+$(UBOOT_BUILD_DIR)/rpi3-arm64/u-boot.bin: $(UBOOT_BUILD_DIR)/rpi3-arm64/.config
+	$(call UBOOT_BUILD,$(ARM64_CROSS_COMPILE),$(UBOOT_BUILD_DIR)/rpi3-arm64)
+$(UBOOT_DISTR_DIR)/u-boot-rpi3-arm64.bin: $(UBOOT_BUILD_DIR)/rpi3-arm64/u-boot.bin
+	$(UBOOT_INSTALL)
+
+################################################################################
+# Raspberry Pi 3 32Bit
+################################################################################
+
+.PHONY: u-boot-rpi3-arm32.bin
+u-boot-rpi3-arm32.bin: $(UBOOT_DISTR_DIR)/u-boot-rpi3-arm32.bin
+$(UBOOT_BUILD_DIR)/rpi3-arm32/.config: $(UBOOT_BUILD_DIR)
+	$(call UBOOT_DEFCONFIG,$(ARM32_CROSS_COMPILE),$(UBOOT_BUILD_DIR)/rpi3-arm32,rpi_3_32b_defconfig)
+$(UBOOT_BUILD_DIR)/rpi3-arm32/u-boot.bin: $(UBOOT_BUILD_DIR)/rpi3-arm32/.config
+	$(call UBOOT_BUILD,$(ARM32_CROSS_COMPILE),$(UBOOT_BUILD_DIR)/rpi3-arm32)
+$(UBOOT_DISTR_DIR)/u-boot-rpi3-arm32.bin: $(UBOOT_BUILD_DIR)/rpi3-arm32/u-boot.bin
+	$(UBOOT_INSTALL)
+
+################################################################################
+# Raspberry Pi 4 64Bit
+################################################################################
+
+.PHONY: u-boot-rpi4-arm64.bin
+u-boot-rpi4-arm64.bin: $(UBOOT_DISTR_DIR)/u-boot-rpi4-arm64.bin
+$(UBOOT_BUILD_DIR)/rpi4-arm64/.config: $(UBOOT_BUILD_DIR)
+	$(call UBOOT_DEFCONFIG,$(ARM64_CROSS_COMPILE),$(UBOOT_BUILD_DIR)/rpi4-arm64,rpi_4_defconfig)
+$(UBOOT_BUILD_DIR)/rpi4-arm64/u-boot.bin: $(UBOOT_BUILD_DIR)/rpi4-arm64/.config
+	$(call UBOOT_BUILD,$(ARM64_CROSS_COMPILE),$(UBOOT_BUILD_DIR)/rpi4-arm64)
+$(UBOOT_DISTR_DIR)/u-boot-rpi4-arm64.bin: $(UBOOT_BUILD_DIR)/rpi4-arm64/u-boot.bin
+	$(UBOOT_INSTALL)
+
+################################################################################
+# Raspberry Pi 4 32Bit
+################################################################################
+
+.PHONY: u-boot-rpi4-arm32.bin
+u-boot-rpi4-arm32.bin: $(UBOOT_DISTR_DIR)/u-boot-rpi4-arm32.bin
+$(UBOOT_BUILD_DIR)/rpi4-arm32/.config: $(UBOOT_BUILD_DIR)
+	$(call UBOOT_DEFCONFIG,$(ARM32_CROSS_COMPILE),$(UBOOT_BUILD_DIR)/rpi4-arm32,rpi_4_32b_defconfig)
+$(UBOOT_BUILD_DIR)/rpi4-arm32/u-boot.bin: $(UBOOT_BUILD_DIR)/rpi4-arm32/.config
+	$(call UBOOT_BUILD,$(ARM32_CROSS_COMPILE),$(UBOOT_BUILD_DIR)/rpi4-arm32)
+$(UBOOT_DISTR_DIR)/u-boot-rpi4-arm32.bin: $(UBOOT_BUILD_DIR)/rpi4-arm32/u-boot.bin
+	$(UBOOT_INSTALL)

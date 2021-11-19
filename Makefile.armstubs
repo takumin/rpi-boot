@@ -1,0 +1,157 @@
+BUILD_DIR ?= /tmp/rpi-boot
+DISTR_DIR ?= $(CURDIR)/distrib
+
+ARM32_CROSS_COMPILE ?= arm-none-linux-gnueabihf-
+ARM64_CROSS_COMPILE ?= aarch64-none-linux-gnu-
+
+CC7      := $(ARM32_CROSS_COMPILE)gcc -march=armv7-a
+LD7      := $(ARM32_CROSS_COMPILE)ld
+OBJCOPY7 := $(ARM32_CROSS_COMPILE)objcopy
+OBJDUMP7 := $(ARM32_CROSS_COMPILE)objdump -marm
+
+CC8      := $(ARM64_CROSS_COMPILE)gcc
+LD8      := $(ARM64_CROSS_COMPILE)ld
+OBJCOPY8 := $(ARM64_CROSS_COMPILE)objcopy
+OBJDUMP8 := $(ARM64_CROSS_COMPILE)objdump -maarch64
+
+MAKE_OPS := CC7="$(CC7)" \
+            LD7="$(LD7)" \
+            OBJCOPY7="$(OBJCOPY7)" \
+            OBJDUMP7="$(OBJDUMP7)" \
+            CC8="$(CC8)" \
+            LD8="$(LD8)" \
+            OBJCOPY8="$(OBJCOPY8)" \
+            OBJDUMP8="$(OBJDUMP8)"
+
+ARMSTUBS_BUILD_DIR := $(BUILD_DIR)/armstubs
+ARMSTUBS_DISTR_DIR := $(DISTR_DIR)
+
+ARMSTUBS_BIN := armstub7.bin \
+                armstub8-32.bin \
+                armstub8-32-gic.bin \
+                armstub8.bin \
+                armstub8-gic.bin \
+                armstub8-gic-highperi.bin
+
+################################################################################
+# Macro
+################################################################################
+
+define ARMSTUBS_DOWNLOAD
+	@if [ ! -f "$@" ]; then \
+		echo "################################################################################"; \
+		echo "# Download: $@"; \
+		echo "################################################################################"; \
+		curl -o "$@" -L "https://github.com/raspberrypi/tools/raw/master/armstubs/$(@F)"; \
+	fi
+endef
+
+define ARMSTUBS_BUILD
+	@echo "################################################################################"
+	@echo "# Build: $@"
+	@echo "################################################################################"
+	@make -C $(ARMSTUBS_BUILD_DIR) $(MAKE_OPS) $(@F)
+endef
+
+define ARMSTUBS_INSTALL
+	@echo "################################################################################"
+	@echo "# Install: $@"
+	@echo "################################################################################"
+	@install -m 0644 "$<" "$@"
+endef
+
+################################################################################
+# Default Target
+################################################################################
+
+.PHONY: armstubs
+armstubs: armstubs-check $(ARMSTUBS_BIN)
+
+################################################################################
+# Check Target
+################################################################################
+
+.PHONY: armstubs-check
+armstubs-check:
+	@curl --version 1>/dev/null 2>&1 || exit 1
+	@$(CC7) -v 1>/dev/null 2>&1 || exit 1
+	@$(CC8) -v 1>/dev/null 2>&1 || exit 1
+
+################################################################################
+# Cleanup Target
+################################################################################
+
+.PHONY: armstubs-clean
+armstubs-clean:
+	@for f in $(ARMSTUBS_BIN); do \
+		rm -f "$(ARMSTUBS_DISTR_DIR)/$$f"; \
+	done
+	@make -C $(ARMSTUBS_BUILD_DIR) $(MAKE_OPS) clean
+
+################################################################################
+# Build Directory
+################################################################################
+
+$(ARMSTUBS_BUILD_DIR):
+	@mkdir -p $@
+
+################################################################################
+# ARM Stub Binaries
+################################################################################
+
+.PHONY: armstubs.makefile
+armstubs.makefile: $(ARMSTUBS_BUILD_DIR)/Makefile
+$(ARMSTUBS_BUILD_DIR)/Makefile: $(ARMSTUBS_BUILD_DIR)
+	$(ARMSTUBS_DOWNLOAD)
+
+.PHONY: armstub7.S
+armstub7.S: $(ARMSTUBS_BUILD_DIR)/armstub7.S
+$(ARMSTUBS_BUILD_DIR)/armstub7.S: $(ARMSTUBS_BUILD_DIR)
+	$(ARMSTUBS_DOWNLOAD)
+
+.PHONY: armstub8.S
+armstub8.S: $(ARMSTUBS_BUILD_DIR)/armstub8.S
+$(ARMSTUBS_BUILD_DIR)/armstub8.S: $(ARMSTUBS_BUILD_DIR)
+	$(ARMSTUBS_DOWNLOAD)
+
+.PHONY: armstub7.bin
+armstub7.bin: $(ARMSTUBS_DISTR_DIR)/armstub7.bin
+$(ARMSTUBS_BUILD_DIR)/armstub7.bin: $(ARMSTUBS_BUILD_DIR)/Makefile $(ARMSTUBS_BUILD_DIR)/armstub7.S
+	$(ARMSTUBS_BUILD)
+$(ARMSTUBS_DISTR_DIR)/armstub7.bin: $(ARMSTUBS_BUILD_DIR)/armstub7.bin
+	$(ARMSTUBS_INSTALL)
+
+.PHONY: armstub8-32.bin
+armstub8-32.bin: $(ARMSTUBS_DISTR_DIR)/armstub8-32.bin
+$(ARMSTUBS_BUILD_DIR)/armstub8-32.bin: $(ARMSTUBS_BUILD_DIR)/Makefile $(ARMSTUBS_BUILD_DIR)/armstub8.S
+	$(ARMSTUBS_BUILD)
+$(ARMSTUBS_DISTR_DIR)/armstub8-32.bin: $(ARMSTUBS_BUILD_DIR)/armstub8-32.bin
+	$(ARMSTUBS_INSTALL)
+
+.PHONY: armstub8-32-gic.bin
+armstub8-32-gic.bin: $(ARMSTUBS_DISTR_DIR)/armstub8-32-gic.bin
+$(ARMSTUBS_BUILD_DIR)/armstub8-32-gic.bin: $(ARMSTUBS_BUILD_DIR)/Makefile $(ARMSTUBS_BUILD_DIR)/armstub8.S
+	$(ARMSTUBS_BUILD)
+$(ARMSTUBS_DISTR_DIR)/armstub8-32-gic.bin: $(ARMSTUBS_BUILD_DIR)/armstub8-32-gic.bin
+	$(ARMSTUBS_INSTALL)
+
+.PHONY: armstub8.bin
+armstub8.bin: $(ARMSTUBS_DISTR_DIR)/armstub8.bin
+$(ARMSTUBS_BUILD_DIR)/armstub8.bin: $(ARMSTUBS_BUILD_DIR)/Makefile $(ARMSTUBS_BUILD_DIR)/armstub8.S
+	$(ARMSTUBS_BUILD)
+$(ARMSTUBS_DISTR_DIR)/armstub8.bin: $(ARMSTUBS_BUILD_DIR)/armstub8.bin
+	$(ARMSTUBS_INSTALL)
+
+.PHONY: armstub8-gic.bin
+armstub8-gic.bin: $(ARMSTUBS_DISTR_DIR)/armstub8-gic.bin
+$(ARMSTUBS_BUILD_DIR)/armstub8-gic.bin: $(ARMSTUBS_BUILD_DIR)/Makefile $(ARMSTUBS_BUILD_DIR)/armstub8.S
+	$(ARMSTUBS_BUILD)
+$(ARMSTUBS_DISTR_DIR)/armstub8-gic.bin: $(ARMSTUBS_BUILD_DIR)/armstub8-gic.bin
+	$(ARMSTUBS_INSTALL)
+
+.PHONY: armstub8-gic-highperi.bin
+armstub8-gic-highperi.bin: $(ARMSTUBS_DISTR_DIR)/armstub8-gic-highperi.bin
+$(ARMSTUBS_BUILD_DIR)/armstub8-gic-highperi.bin: $(ARMSTUBS_BUILD_DIR)/Makefile $(ARMSTUBS_BUILD_DIR)/armstub8.S
+	$(ARMSTUBS_BUILD)
+$(ARMSTUBS_DISTR_DIR)/armstub8-gic-highperi.bin: $(ARMSTUBS_BUILD_DIR)/armstub8-gic-highperi.bin
+	$(ARMSTUBS_INSTALL)

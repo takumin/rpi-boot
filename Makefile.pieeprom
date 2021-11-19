@@ -1,0 +1,187 @@
+BUILD_DIR ?= /tmp/rpi-boot
+DISTR_DIR ?= $(CURDIR)/distrib
+
+PIEEPROM_BRANCH         ?= stable
+PIEEPROM_EEPROM_RELEASE ?= 2021-07-06
+PIEEPROM_VL805_RELEASE  ?= 000138a1
+
+PIEEPROM_BUILD_DIR := $(BUILD_DIR)/pieeprom
+PIEEPROM_DISTR_DIR := $(DISTR_DIR)
+
+PIEEPROM_FILES := pieeprom.bin \
+                  pieeprom.upd \
+                  pieeprom.sig \
+                  recovery.bin \
+                  vl805.bin \
+                  vl805.sig
+
+PIEEPROM_BIN_DEPENDS := $(PIEEPROM_BUILD_DIR)/rpi-eeprom-config \
+                        $(PIEEPROM_BUILD_DIR)/pieeprom.conf \
+                        $(PIEEPROM_BUILD_DIR)/pieeprom.orig.bin
+
+################################################################################
+# Macro
+################################################################################
+
+define PIEEPROM_DOWNLOAD
+	@if [ ! -f "$@" ]; then \
+		echo "################################################################################"; \
+		echo "# Download: $@"; \
+		echo "################################################################################"; \
+		curl -o "$@" -L "https://github.com/raspberrypi/rpi-eeprom/raw/master/$1"; \
+	fi
+endef
+
+define PIEEPROM_INSTALL
+	@echo "################################################################################"
+	@echo "# Install: $@"
+	@echo "################################################################################"
+	@install -m 0644 "$<" "$@"
+endef
+
+define PIEEPROM_CONFIG
+	@echo "################################################################################"
+	@echo "# Configure: $@"
+	@echo "################################################################################"
+	@{ \
+		echo "[all]"; \
+		echo "BOOT_ORDER=0xf21"; \
+		echo "ENABLE_SELF_UPDATE=1"; \
+		echo ""; \
+	} > "$@"
+endef
+
+define PIEEPROM_GENERATE
+	@echo "################################################################################"
+	@echo "# Generate: $@"
+	@echo "################################################################################"
+	@$(PIEEPROM_BUILD_DIR)/rpi-eeprom-config \
+		--config "$(PIEEPROM_BUILD_DIR)/pieeprom.conf" \
+		--out "$@" \
+		"$(PIEEPROM_BUILD_DIR)/pieeprom.orig.bin"
+endef
+
+define PIEEPROM_SHA256SUM
+	@echo "################################################################################"
+	@echo "# Generate: $@"
+	@echo "################################################################################"
+	@sha256sum "$<" | awk '{print $$1}' > "$@"
+endef
+
+################################################################################
+# Default Target
+################################################################################
+
+.PHONY: pieeprom
+pieeprom: $(PIEEPROM_FILES)
+
+################################################################################
+# Cleanup Target
+################################################################################
+
+.PHONY: pieeprom-clean
+pieeprom-clean:
+	@for f in $(PIEEPROM_FILES); do \
+		rm -f "$(PIEEPROM_DISTR_DIR)/$$f"; \
+	done
+
+################################################################################
+# Build Directory
+################################################################################
+
+$(PIEEPROM_BUILD_DIR):
+	@mkdir -p "$(PIEEPROM_BUILD_DIR)"
+
+################################################################################
+# EEPROM Modify Script
+################################################################################
+
+.PHONY: rpi-eeprom-config
+rpi-eeprom-config: $(PIEEPROM_BUILD_DIR)/rpi-eeprom-config
+$(PIEEPROM_BUILD_DIR)/rpi-eeprom-config: $(PIEEPROM_BUILD_DIR)
+	$(call PIEEPROM_DOWNLOAD,$(@F))
+	@chmod +x "$@"
+
+################################################################################
+# EEPROM Original Binary
+################################################################################
+
+.PHONY: pieeprom.orig.bin
+pieeprom.orig.bin: $(PIEEPROM_BUILD_DIR)/pieeprom.orig.bin
+$(PIEEPROM_BUILD_DIR)/pieeprom.orig.bin: $(PIEEPROM_BUILD_DIR)
+	$(call PIEEPROM_DOWNLOAD,firmware/$(PIEEPROM_BRANCH)/pieeprom-$(PIEEPROM_EEPROM_RELEASE).bin)
+
+################################################################################
+# EEPROM Config File
+################################################################################
+
+.PHONY: pieeprom.conf
+pieeprom.conf: $(PIEEPROM_BUILD_DIR)/pieeprom.conf
+$(PIEEPROM_BUILD_DIR)/pieeprom.conf: $(PIEEPROM_BUILD_DIR)
+	$(PIEEPROM_CONFIG)
+
+################################################################################
+# EEPROM Modify Binary
+################################################################################
+
+.PHONY: pieeprom.bin
+pieeprom.bin: $(PIEEPROM_DISTR_DIR)/pieeprom.bin
+$(PIEEPROM_BUILD_DIR)/pieeprom.bin: $(PIEEPROM_BIN_DEPENDS)
+	$(PIEEPROM_GENERATE)
+$(PIEEPROM_DISTR_DIR)/pieeprom.bin: $(PIEEPROM_BUILD_DIR)/pieeprom.bin
+	$(PIEEPROM_INSTALL)
+
+################################################################################
+# EEPROM Update Binary
+################################################################################
+
+.PHONY: pieeprom.upd
+pieeprom.upd: $(PIEEPROM_DISTR_DIR)/pieeprom.upd
+$(PIEEPROM_BUILD_DIR)/pieeprom.upd: $(PIEEPROM_BUILD_DIR)/pieeprom.bin
+	@cp "$<" "$@"
+$(PIEEPROM_DISTR_DIR)/pieeprom.upd: $(PIEEPROM_BUILD_DIR)/pieeprom.upd
+	$(PIEEPROM_INSTALL)
+
+################################################################################
+# EEPROM Signature
+################################################################################
+
+.PHONY: pieeprom.sig
+pieeprom.sig: $(PIEEPROM_DISTR_DIR)/pieeprom.sig
+$(PIEEPROM_BUILD_DIR)/pieeprom.sig: $(PIEEPROM_BUILD_DIR)/pieeprom.bin
+	$(PIEEPROM_SHA256SUM)
+$(PIEEPROM_DISTR_DIR)/pieeprom.sig: $(PIEEPROM_BUILD_DIR)/pieeprom.sig
+	$(PIEEPROM_INSTALL)
+
+################################################################################
+# Recovery Binary
+################################################################################
+
+.PHONY: recovery.bin
+recovery.bin: $(PIEEPROM_DISTR_DIR)/recovery.bin
+$(PIEEPROM_BUILD_DIR)/recovery.bin: $(PIEEPROM_BUILD_DIR)
+	$(call PIEEPROM_DOWNLOAD,$(@F))
+$(PIEEPROM_DISTR_DIR)/recovery.bin: $(PIEEPROM_BUILD_DIR)/recovery.bin
+	$(PIEEPROM_INSTALL)
+
+################################################################################
+# USB Firmware Binary
+################################################################################
+
+.PHONY: vl805.bin
+vl805.bin: $(PIEEPROM_DISTR_DIR)/vl805.bin
+$(PIEEPROM_BUILD_DIR)/vl805.bin: $(PIEEPROM_BUILD_DIR)
+	$(call PIEEPROM_DOWNLOAD,firmware/$(PIEEPROM_BRANCH)/vl805-$(PIEEPROM_VL805_RELEASE).bin)
+$(PIEEPROM_DISTR_DIR)/vl805.bin: $(PIEEPROM_BUILD_DIR)/vl805.bin
+	$(PIEEPROM_INSTALL)
+
+################################################################################
+# USB Firmware Signature
+################################################################################
+
+.PHONY: vl805.sig
+vl805.sig: $(PIEEPROM_DISTR_DIR)/vl805.sig
+$(PIEEPROM_BUILD_DIR)/vl805.sig: $(PIEEPROM_BUILD_DIR)/vl805.bin
+	$(PIEEPROM_SHA256SUM)
+$(PIEEPROM_DISTR_DIR)/vl805.sig: $(PIEEPROM_BUILD_DIR)/vl805.sig
+	$(PIEEPROM_INSTALL)
